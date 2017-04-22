@@ -1,0 +1,5 @@
+#!/bin/bash
+
+processing-java --run --sketch=$PWD --output=$PWD/output --force
+cd data
+python processing_data.py
