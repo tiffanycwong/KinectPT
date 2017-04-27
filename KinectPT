@@ -1,5 +1,31 @@
 #!/bin/bash
 
-processing-java --run --sketch=$PWD --output=$PWD/output --force
+rm $PWD/data/positions_*.csv
+
+COUNTER=0
+## Right now only loops once but we can change that once we validate this works
+while [  $COUNTER -lt 1 ]; do
+  let COUNTER=COUNTER+1 
+  
+  failuretext=$(processing-java --run --sketch=$PWD --output=$PWD/output --force | \sed -n 5p)
+  echo $failuretext
+  stringarray=($failuretext)
+  echo ${stringarray[1]}
+  if [[ "${stringarray[1]}" == "Error:" ]]
+    then
+      echo Succeeded
+  fi  
+done
+
+## Do some data processing in order to merge the files created into a single table file that will be analyzed
 cd data
+cat $PWD/data_header.csv > positions.csv
+posfilecount=$(ls -lR $PWD/*.csv | wc -l)
+
+## You'll get some 'No such file positions_X.csv' because it 
+##goes over range but that doesn't affect the output
+##so I am not going to try to fix it
+for i in $(seq 1 $posfilecount); do
+  tail -n +2 $PWD/positions_$i.csv >> $PWD/positions.csv
+done
 python processing_data.py
