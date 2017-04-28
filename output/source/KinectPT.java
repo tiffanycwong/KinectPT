@@ -1,7 +1,25 @@
-import SimpleOpenNI.*;
+import processing.core.*; 
+import processing.data.*; 
+import processing.event.*; 
+import processing.opengl.*; 
+
+import SimpleOpenNI.*; 
+
+import java.util.HashMap; 
+import java.util.ArrayList; 
+import java.io.File; 
+import java.io.BufferedReader; 
+import java.io.PrintWriter; 
+import java.io.InputStream; 
+import java.io.OutputStream; 
+import java.io.IOException; 
+
+public class KinectPT extends PApplet {
+
+
 
 SimpleOpenNI context;
-boolean start = false;
+boolean start = true;
 boolean hastracked = false;
 Table positions;
 String[] skeletonNames = { "head", "neck", "leftshoulder", "leftelbow", "lefthand", "rightshoulder", "rightelbow", "righthand", "torso", "lefthip", "leftknee", "leftfoot", "righthip", "rightknee", "rightfoot" };
@@ -10,7 +28,8 @@ PVector com = new PVector();
 PVector com2d = new PVector();
 int[] skeletonIds;
 
-void setup() {
+
+public void setup() {
   size(640, 480);
   frameRate(25);
   
@@ -35,29 +54,35 @@ void setup() {
   setupTable();
   
   // Draw Welcome Message
-  textSize(32); // Set text size to 32
-  fill(0);
-  text("Welcome to Kinect PT !", 100, 100);
-  textSize(17);
-  text("Wait for the red circle to disappear to start your presentation.", 70, 180);
-  text("Please press the space bar when you are done.", 100, 210);
-  textSize(24); // Set text size to 32
-  text("Click anywhere to begin.", 150, 270);
+//  textSize(32); // Set text size to 32
+//  fill(0);
+//  text("Welcome to Kinect PT !", 100, 100);
+//  textSize(17);
+//  text("Wait for the red circle to disappear to start your presentation.", 70, 180);
+//  text("Please press the space bar when you are done.", 100, 210);
+//  textSize(24); // Set text size to 32
+//  text("Click anywhere to begin.", 150, 270);
   
   getSkeletonList();
   
 }
 
-void draw() {
+// Counter to no how often we save a file
+int printcounter = 1;
+
+public void draw() {
+  
+  printcounter += 1;
   if (start) {
     context.update();
-    image(context.userImage(),0,0);
+//    image(context.userImage(),0,0);
     
     // Affordance for UI to tell user when to start presenting
     if (!hastracked){
       // Draw red circle
       fill(255,0,0);
       ellipse(100,100,100,100);
+      printcounter -= 1;
     }
     
     // get joint position of user
@@ -89,11 +114,16 @@ void draw() {
         }
       }
    }
+   
+   //Save out table to a file!
+   if (printcounter % 50 == 0) {
+       saveTableNow(printcounter/50+1);
+   }
  }
 }
 
 // Setup Necessary Data Structures
-void getSkeletonList(){ 
+public void getSkeletonList(){ 
   int[] kinectIds = {SimpleOpenNI.SKEL_HEAD, SimpleOpenNI.SKEL_NECK, SimpleOpenNI.SKEL_LEFT_SHOULDER,
   SimpleOpenNI.SKEL_LEFT_ELBOW, SimpleOpenNI.SKEL_LEFT_HAND, SimpleOpenNI.SKEL_RIGHT_SHOULDER,
   SimpleOpenNI.SKEL_RIGHT_ELBOW, SimpleOpenNI.SKEL_RIGHT_HAND, SimpleOpenNI.SKEL_TORSO,
@@ -106,7 +136,7 @@ void getSkeletonList(){
   } 
 }
 
-void setupTable()
+public void setupTable()
 {
   positions = new Table();
   positions.addColumn("user");
@@ -124,7 +154,7 @@ void setupTable()
 }
 
 // SimpleOpenNI events
-void onNewUser(SimpleOpenNI curContext, int userId)
+public void onNewUser(SimpleOpenNI curContext, int userId)
 {
   println("onNewUser - userId: " + userId);
   println("\tstart tracking skeleton");
@@ -132,32 +162,52 @@ void onNewUser(SimpleOpenNI curContext, int userId)
   curContext.startTrackingSkeleton(userId);
 }
 
-void onLostUser(SimpleOpenNI curContext, int userId)
+public void onLostUser(SimpleOpenNI curContext, int userId)
 {
   println("onLostUser - userId: " + userId);
 }
 
-void onVisibleUser(SimpleOpenNI curContext, int userId)
+public void onVisibleUser(SimpleOpenNI curContext, int userId)
 {
   //println("onVisibleUser - userId: " + userId);
 }
 
-void keyPressed()
-{
-  switch(key)
-  {
-  case ' ':
-    saveTable(positions, "data/positions.csv");
-//    cam.stop();
-    noLoop();
+// Save table based on a file number
+public void saveTableNow(int filenumber) {
+  String tablefilename = "data/positions_" + filenumber + ".csv"; 
+  saveTable(positions, tablefilename);
+  if (filenumber > 2) {
     exit();
   }
 }
 
-void mouseClicked() {
+
+// Removed because now it just saves every X amount of times based on a counter variable
+//void keyPressed()
+//{
+//  switch(key)
+//  {
+//  case ' ':
+//    saveTable(positions, "data/positions.csv");
+////    cam.stop();
+//    noLoop();
+//    exit();
+//  }
+//}
+
+public void mouseClicked() {
   if (!start) {
     start = true;
     background(0);
   }
 }
 
+  static public void main(String[] passedArgs) {
+    String[] appletArgs = new String[] { "KinectPT" };
+    if (passedArgs != null) {
+      PApplet.main(concat(appletArgs, passedArgs));
+    } else {
+      PApplet.main(appletArgs);
+    }
+  }
+}

@@ -4,17 +4,23 @@ rm $PWD/data/positions_*.csv
 
 COUNTER=0
 ## Right now only loops once but we can change that once we validate this works
-while [  $COUNTER -lt 1 ]; do
+while [ true ]; do
   let COUNTER=COUNTER+1 
-  
-  failuretext=$(processing-java --run --sketch=$PWD --output=$PWD/output --force | \sed -n 5p)
-  echo $failuretext
-  stringarray=($failuretext)
-  echo ${stringarray[1]}
-  if [[ "${stringarray[1]}" == "Error:" ]]
+  echo working 
+  if [[ -f $PWD/data/positions_1.csv ]]
     then
       echo Succeeded
-  fi  
+      break
+  fi
+
+  failuretext=$(processing-java --run --sketch=$PWD --output=$PWD/output --force | \sed -n 5p)
+  #echo $failuretext
+  #stringarray=($failuretext)
+  #echo ${stringarray[1]}
+  #if [[ "${stringarray[1]}" == "Error:" ]]
+  #  then
+  #    echo Succeeded
+  #fi  
 done
 
 ## Do some data processing in order to merge the files created into a single table file that will be analyzed
