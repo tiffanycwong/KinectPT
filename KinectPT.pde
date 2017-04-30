@@ -1,7 +1,7 @@
 import SimpleOpenNI.*;
 
 SimpleOpenNI context;
-boolean start = true;
+boolean start = false;
 boolean hastracked = false;
 Table positions;
 String[] skeletonNames = { "head", "neck", "leftshoulder", "leftelbow", "lefthand", "rightshoulder", "rightelbow", "righthand", "torso", "lefthip", "leftknee", "leftfoot", "righthip", "rightknee", "rightfoot" };
@@ -36,35 +36,34 @@ void setup() {
   setupTable();
   
   // Draw Welcome Message
-//  textSize(32); // Set text size to 32
-//  fill(0);
-//  text("Welcome to Kinect PT !", 100, 100);
-//  textSize(17);
-//  text("Wait for the red circle to disappear to start your presentation.", 70, 180);
-//  text("Please press the space bar when you are done.", 100, 210);
-//  textSize(24); // Set text size to 32
-//  text("Click anywhere to begin.", 150, 270);
+  textSize(32); // Set text size to 32
+  fill(0);
+  text("Welcome to Kinect PT !", 100, 100);
+  textSize(17);
+  text("Wait for the red circle to disappear to start your presentation.", 70, 180);
+  text("Please press the space bar when you are done.", 100, 210);
+  textSize(24); // Set text size to 32
+  text("Click anywhere to begin.", 150, 270);
   
   getSkeletonList();
   
 }
 
 // Counter to no how often we save a file
-int printcounter = 1;
+int printcounter = 0;
 
 void draw() {
   
   printcounter += 1;
   if (start) {
     context.update();
-//    image(context.userImage(),0,0);
+    image(context.userImage(),0,0);
     
     // Affordance for UI to tell user when to start presenting
     if (!hastracked){
       // Draw red circle
       fill(255,0,0);
       ellipse(100,100,100,100);
-      printcounter -= 1;
     }
     
     // get joint position of user
@@ -99,7 +98,7 @@ void draw() {
    
    //Save out table to a file!
    if (printcounter % 50 == 0) {
-       saveTableNow(printcounter/50+1);
+     saveTableNow(printcounter/200+1);
    }
  }
 }
@@ -158,9 +157,6 @@ void onVisibleUser(SimpleOpenNI curContext, int userId)
 void saveTableNow(int filenumber) {
   String tablefilename = "data/positions_" + filenumber + ".csv"; 
   saveTable(positions, tablefilename);
-  if (filenumber > 2) {
-    exit();
-  }
 }
 
 
@@ -183,4 +179,3 @@ void mouseClicked() {
     background(0);
   }
 }
-
