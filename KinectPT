@@ -34,4 +34,4 @@ posfilecount=$(ls -lR $PWD/*.csv | wc -l)
 for i in $(seq 1 $posfilecount); do
   tail -n +2 $PWD/positions_$i.csv >> $PWD/positions.csv
 done
-python processing_data.py
+python optimizing_process_data.py
