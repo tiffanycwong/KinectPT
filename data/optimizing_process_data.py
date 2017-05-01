@@ -138,6 +138,8 @@ def updated_analyzer_sumo_kettlebell_raise(frame, constants):
 	HANDS_MIN_DIST_FROM_NECK_Y_TOO_LOW = constants["HANDS_MIN_DIST_FROM_NECK_Y_TOO_LOW"]
 	HANDS_MIN_DIST_FROM_NECK_Y_TOO_HIGH = constants["HANDS_MIN_DIST_FROM_NECK_Y_TOO_HIGH"]
 
+	DIFFERENCE_BETWEEN_ELBOWS = constants["DIFFERENCE_BETWEEN_ELBOWS"]
+
 
 	## Get the values that we are interested in
 	neck_x = joint_data("neckx", frame)
@@ -223,9 +225,19 @@ def updated_analyzer_sumo_kettlebell_raise(frame, constants):
 	else:
 		messageToUser = 'You are raising your arms to the right height good job!'
 
+
+	distanceBetweenElbows = abs(left_hand_y - right_hand_y)
+	if distanceBetweenElbows/AVG_FOREARM_LENGTH > DIFFERENCE_BETWEEN_ELBOWS/AVG_FOREARM_LENGTH:
+		messageToUser = 'Raise your arms evenly next time!'
+		FEEDBACK2 = 'NE'
+	else:
+		messageToUser = 'Congrats! You raised your arms evenly you are so smart!'
+		FEEDBACK2 = 'E'
+
 	return {
 		'PASSED': PASSED,
-		'FEEDBACK': FEEDBACK
+		'FEEDBACK': FEEDBACK,
+		'FEEDBACK2': FEEDBACK2
 	}
 
 
@@ -240,7 +252,8 @@ def analyze_data(position, data, constants):
 	## that frame
 	finalResults = {
 		'PASSED':[False, False, False],
-		'FEEDBACK': []
+		'FEEDBACK': [],
+		'FEEDBACK2': []
 	}
 	if position == "sumo kettlebell raise":
 		toCheck = ["lefthandy", "righthandy"]
@@ -253,9 +266,10 @@ def analyze_data(position, data, constants):
 				if currResults['PASSED'][i]:
 					finalResults['PASSED'][i] = True
 			finalResults['FEEDBACK'].append(currResults['FEEDBACK'])
+			finalResults['FEEDBACK2'].append(currResults['FEEDBACK2'])
 
 	### Now give feedback!
-	for key in ['PASSED','FEEDBACK']:
+	for key in ['PASSED','FEEDBACK','FEEDBACK2']:
 		messageToUser = ""
 		if key == "PASSED":
 			if not finalResults[key][0]:
@@ -273,7 +287,8 @@ def analyze_data(position, data, constants):
 				print messageToUser
 				os.system("say " + messageToUser)
 				break
-		else:
+
+		if key == 'FEEDBACK':
 			key = finalResults[key][0] + finalResults[key][0]
 			if key == 'LL':
 				messageToUser = 'You need to raise your arms higher'
@@ -287,6 +302,18 @@ def analyze_data(position, data, constants):
 				messageToUser = 'You are raising your arms to the right height good job!'
 				print messageToUser
 				os.system("say " + messageToUser )
+
+		if key == 'FEEDBACK2':
+			key = finalResults[key][0] + finalResults[key][0]
+			if key == 'NENE':
+				messageToUser = 'Raise your arms evenly next time!'
+				print messageToUser
+				os.system("say " + messageToUser )
+			else:
+				messageToUser = 'Congrats! You raised your arms evenly you are so smart!'
+				print messageToUser
+				os.system("say " + messageToUser )
+
 	return finalResults
 
 CONSTS = {
@@ -294,6 +321,7 @@ CONSTS = {
 	'HANDS_MIN_DIST_FROM_NECK_X': 200,
 	'HANDS_MIN_DIST_FROM_NECK_Y_TOO_LOW': 170,
 	'HANDS_MIN_DIST_FROM_NECK_Y_TOO_HIGH': 20,
+	'DIFFERENCE_BETWEEN_ELBOWS': 40
 }
 
 res = analyze_data("sumo kettlebell raise", data, CONSTS)
