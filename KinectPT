@@ -1,5 +1,17 @@
 #!/bin/bash
 
+declare -A exercises
+exercises=(["1"]="Sumo Kettlebell Raise" ["2"]="Bent-Over Dumbbell Raise")
+
+printf "What is the exercise you will be doing? \n 1 Sumo Kettlebell Raise \n 2 Bent-Over Dumbbell Raise. \n Type the corresponding number in and press [ENTER]:  "
+read exercise_number
+while [ "$exercise_number" != "1" ] && [ "$exercise_number" != "2" ]; do
+  echo "The number you entered is not a valid choice. Please try again: "
+  read exercise_number
+done
+
+say -v "Alex" "Starting ${exercises[$exercise_number]}"
+echo "Starting ${exercises[$exercise_number]}"
 rm $PWD/data/positions_*.csv
 
 COUNTER=0
@@ -7,7 +19,11 @@ COUNTER=0
 while [ true ]; do
   let COUNTER=COUNTER+1 
   echo working 
-  if [[ -f $PWD/data/positions_1.csv ]]
+
+  number_of_lines= wc -l <$PWD/data/positions_1.csv
+
+  echo $number_of_lines
+  if [[ $(wc -l <$PWD/data/positions_1.csv) -ge 2 ]]
     then
       echo Succeeded
       break
@@ -34,4 +50,4 @@ posfilecount=$(ls -lR $PWD/*.csv | wc -l)
 for i in $(seq 1 $posfilecount); do
   tail -n +2 $PWD/positions_$i.csv >> $PWD/positions.csv
 done
-python optimizing_process_data.py
+python optimizing_process_data.py positions.csv $exercise_number

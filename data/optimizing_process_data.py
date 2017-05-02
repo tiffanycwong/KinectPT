@@ -2,8 +2,16 @@ import csv
 import os
 import sys
 import math
+import random
 
 filename = sys.argv[1]
+exercise_num = sys.argv[2]
+exercises = ["sumo kettlebell raise", "bent-over dumbbell raise"]
+exercise = exercises[int(exercise_num) - 1]
+
+
+POSITIVE_WORDS = ["Good job!", "Killed it!", "Congrats!","Baller status!"]
+
 sayYN = True
 if len(sys.argv) > 2: 
 	if sys.argv[2] == 'no':
@@ -223,7 +231,8 @@ def updated_analyzer_sumo_kettlebell_raise(frame, constants):
 		FEEDBACK='L'
 		# print messageToUser
 	else:
-		messageToUser = 'You are raising your arms to the right height good job!'
+		positive_word = random.choice(POSITIVE_WORDS)
+		messageToUser = 'You are raising your arms to the right height '+ positive_word
 
 
 	distanceBetweenElbows = abs(left_hand_y - right_hand_y)
@@ -231,7 +240,8 @@ def updated_analyzer_sumo_kettlebell_raise(frame, constants):
 		messageToUser = 'Raise your arms evenly next time!'
 		FEEDBACK2 = 'NE'
 	else:
-		messageToUser = 'Congrats! You raised your arms evenly you are so smart!'
+		positive_word = random.choice(POSITIVE_WORDS)
+		messageToUser = positive_word + ' You raised your arms evenly you are so smart!'
 		FEEDBACK2 = 'E'
 
 	return {
@@ -269,6 +279,7 @@ def analyze_data(position, data, constants):
 			finalResults['FEEDBACK2'].append(currResults['FEEDBACK2'])
 
 	### Now give feedback!
+	print("---------------------------------------------------------------------------")
 	for key in ['PASSED','FEEDBACK','FEEDBACK2']:
 		messageToUser = ""
 		if key == "PASSED":
@@ -324,7 +335,9 @@ CONSTS = {
 	'DIFFERENCE_BETWEEN_ELBOWS': 40
 }
 
-res = analyze_data("sumo kettlebell raise", data, CONSTS)
+
+
+res = analyze_data(exercise, data, CONSTS)
 
 ####### TESTING BELOW
 
@@ -411,131 +424,6 @@ res = analyze_data("sumo kettlebell raise", data, CONSTS)
 # print 'JL: ' + str(feedbackGiven['JL'])
 # print 'LJ: ' + str(feedbackGiven['LJ'])
 # print 'LL: ' + str(feedbackGiven['LL'])
-
-
-def analyze_sumo_kettlebell_raise(frame, constants):
-	HANDS_Y_DIFF,ELBOWS_Y_DIFF,HEIGHT_DIFF_1,HEIGHT_DIFF_2,PARALLEL_TO_GROUND_DIFF = constants
-	PASSED = [False, False, False]
-	#are both arms working? as
-	neck_y = joint_data("necky", frame)
-	left_hand_y = joint_data("lefthandy", frame)
-	right_hand_y = joint_data("righthandy", frame)
-	left_elbow_y = joint_data("leftelbowy", frame)
-	right_elbow_y = joint_data("rightelbowy", frame)
-
-	# both arms? 
-	hands_y_diff = abs(right_hand_y - left_hand_y)
-	elbows_y_diff = abs(right_elbow_y - left_elbow_y)
-	if (hands_y_diff > HANDS_Y_DIFF) or (elbows_y_diff > ELBOWS_Y_DIFF) : # number need tweaking 
-		msg = 'improvement required: raise both arms evenly'
-	else:
-		msg = 'good work: arms raised evenly'
-		PASSED[0] = True
-	# print msg
-	if sayYN:
-		os.system("say " + msg ) 
-
-	# right height?
-	height_diff = neck_y - ((left_hand_y + right_hand_y) /2)
-	if (height_diff < HEIGHT_DIFF_1) :
-		msg = 'improvement required: raise arms higher'
-	elif (height_diff > HEIGHT_DIFF_2) :
-		msg = 'improvement required: arms too high'
-	else: 
-		msg = 'good work: arms raised to appropriate height'
-		PASSED[1] = True
-	# print msg
-	if sayYN:
-		os.system("say " + msg ) 
-
-	# are forearms parallel to the ground? 
-	if abs(left_elbow_y - left_hand_y) < PARALLEL_TO_GROUND_DIFF:
-		msg = 'good work: wrist and elbow in-line'
-		PASSED[2] = True
-	else: 
-		msg = 'improvement required: try to get your arms parallel to the ground'
-	# print msg
-	if sayYN:
-		os.system("say " + msg ) 
-
-	return PASSED
-
-
-# Gives feedback on based on the data that was collected
-# Arguments:
-#	position: what exercise is being done (as a string)
-#	data: all of the data collected in the run
-#	constants: the constants for the classifier (refer to that function to know what they mean)
-# def analyze_data(position, data, constants=(12,30,60,20,10)):
-# 	## For sumo kettlebell raise, we look at the frame where the lefthandy is max right now and consider
-# 	## that frame
-# 	finalResults = []
-# 	if position == "sumo kettlebell raise":
-# 		finalResults = [False,False,False]
-# 		toCheck = ["lefthandy", "righthandy"]
-# 		for val in toCheck:
-# 			frame = select_frame(data, val, "max")
-# 			currResults = analyze_sumo_kettlebell_raise(frame,constants)
-# 			for i in xrange(len(currResults)):
-# 				if currResults[i]:
-# 					finalResults[i] = True
-
-# 	return finalResults
-
-
-
-GAP = 10
-
-# # fullresults = [analyze_data("sumo kettlebell raise", data, (i,j,k,l,m)) for i in xrange(0,50,GAP) for j in xrange(10,80,GAP) for k in xrange(100,600,GAP) for l in xrange(100,600,GAP) for m in xrange(20,80,GAP)]
-# fullids = [(i,j,k,l,m) for i in xrange(0,50,GAP) for j in xrange(10,80,GAP) for k in xrange(100,600,GAP) for l in xrange(100,600,GAP) for m in xrange(20,80,GAP)]
-
-
-# # str(analyze_data("sumo kettlebell raise", data, (40, 50, 100, 160, 60)))
-# print 'The test: ' + str(analyze_data("sumo kettlebell raise", data, (40, 50, 100, 160, 60)))
-# # ## Original try (10, 20, 100, 410, 20)
-# print 'The test: ' + str(analyze_data("sumo kettlebell raise", data, (40, 50, 100, 410, 60)))
-
-# results = {
-# 	'000':0,
-# 	'001':0,
-# 	'010':0,
-# 	'011':0,
-# 	'100':0,
-# 	'101':0,
-# 	'110':0,
-# 	'111':0,
-# }
-
-# printed1 = False
-# fullresults = []
-# for e in xrange(len(fullresults)):
-# 	if fullresults[0]:
-# 		if fullresults[1]:
-# 			if fullresults[2]:
-# 				results['111'] += 1
-# 			else:
-# 				results['110'] += 1
-# 		else:
-# 			if fullresults[2]:
-# 				results['101'] += 1
-# 			else:
-# 				results['100'] += 1
-# 	else:
-# 		if fullresults[1]:
-# 			if fullresults[2]:
-# 				results['011'] += 1
-# 			else:
-# 				results['010'] += 1
-# 		else:
-# 			if fullresults[2]:
-# 				results['001'] += 1
-# 			else:
-# 				results['000'] += 1
-
-# print results
-# print len(results)
-
-
 
 
 

@@ -40,8 +40,8 @@ void setup() {
   fill(0);
   text("Welcome to Kinect PT !", 100, 100);
   textSize(17);
-  text("Wait for the red circle to disappear to start your presentation.", 70, 180);
-  text("Please press the space bar when you are done.", 100, 210);
+  text("Wait for the red circle to disappear to start your workout.", 70, 180);
+  text("Please press the space bar when you are done or wait for data to save automatically.", 100, 210);
   textSize(24); // Set text size to 32
   text("Click anywhere to begin.", 150, 270);
   
@@ -161,17 +161,14 @@ void saveTableNow(int filenumber) {
 
 
 // Removed because now it just saves every X amount of times based on a counter variable
-//void keyPressed()
-//{
-//  switch(key)
-//  {
-//  case ' ':
-//    saveTable(positions, "data/positions.csv");
-////    cam.stop();
-//    noLoop();
-//    exit();
-//  }
-//}
+void keyPressed()
+{
+  switch(key)
+  {
+  case ' ':
+   exit();
+ }
+}
 
 void mouseClicked() {
   if (!start) {
