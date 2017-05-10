@@ -14,7 +14,7 @@ POSITIVE_WORDS = ["Good job!", "Killed it!", "Congrats!","Baller status!"]
 
 sayYN = True
 if len(sys.argv) > 2: 
-	if sys.argv[2] == 'no':
+	if sys.argv[3] == 'no':
 		sayYN = False
 print 'Processing: ' + filename
 
@@ -103,19 +103,9 @@ def select_frame(data, joint, best):
 			best_frame = frame
 			frame_number = frame_count
 	# print best_value	
-	# print 'Looking at frame: ' + str(frame_number+1)
+	print 'Looking at frame: ' + str(frame_number+1)
 	# print best_frame[1]
 	return best_frame 
-
-##################################################
-# CONSTANTS TO USE FOR THE SUMO KETTLEBELL RAISE #
-##################################################
-# Originals
-	# HANDS_Y_DIFF = 12
-	# ELBOWS_Y_DIFF = 30
-	# HEIGHT_DIFF_1 = 60
-	# HEIGHT_DIFF_2 = 20
-	# PARALLEL_TO_GROUND_DIFF = 10
 
 def normalization_forearm_length_data_in_frame(frame):
 	## Grab the length of the elbow to hand for both left and right and determine the length
@@ -133,13 +123,23 @@ def normalization_forearm_length_data_in_frame(frame):
 
 	return (rightForearmLength+leftForearmLength)/2
 
+
+#########################
+# SUMO KETTLEBELL RAISE #
+#########################
+# Originals
+	# HANDS_Y_DIFF = 12
+	# ELBOWS_Y_DIFF = 30
+	# HEIGHT_DIFF_1 = 60
+	# HEIGHT_DIFF_2 = 20
+	# PARALLEL_TO_GROUND_DIFF = 10
 def updated_analyzer_sumo_kettlebell_raise(frame, constants):
 	PASSED = [True, True, True]
 
 	messageToUser = ''
 
 	AVG_FOREARM_LENGTH = normalization_forearm_length_data_in_frame(frame)
-
+	constants['AVG_FOREARM_LENGTH'] = AVG_FOREARM_LENGTH
 	# Constants that are used for the tests
 	ELBOW_HAND_Y_DIFF_AVG = constants["ELBOW_HAND_Y_DIFF_AVG"]
 	HANDS_MIN_DIST_FROM_NECK_X = constants["HANDS_MIN_DIST_FROM_NECK_X"]
@@ -168,13 +168,60 @@ def updated_analyzer_sumo_kettlebell_raise(frame, constants):
 	##	(2) Are the elbows and hands roughly at the same height
 	##	(3) Are the hands a min distance from the neck x direction (y direction will be left for feedback)
 	## Test 1:
-	if not (left_elbow_x < left_hand_x and left_hand_x < right_hand_x and right_hand_x < right_elbow_x):
-		## Failed the first test
-		messageToUser = 'It looks like you are doing the wrong exercise. Make sure your elbows don\'t move as your hands move straight up towards your head.'
-		# print messageToUser
-		PASSED[0] = False
+	PASSED[0] = _test_order_of_joints(frame, ["leftelbowx","lefthandx","righthandx","rightelbowx"])
+
+	# if not (joint_data(frame,order[0]) < joint_data(frame,order[1]) and joint_data(frame,order[1]) < joint_data(frame,order[2]) and joint_data(frame,order[2]) < joint_data(frame,order[3])):
+	# 	## Failed the first test
+	# 	messageToUser = 'It looks like you are doing the wrong exercise. Make sure your elbows don\'t move as your hands move straight up towards your head.'
+	# 	# print messageToUser
+	# 	PASSED[0] = False
 
 	## Test 2: many ways to do this. For now, find the difference of all points relative to one another
+	PASSED[1] = _test_hands_and_elbows_same_height(frame, ELBOW_HAND_Y_DIFF_AVG, AVG_FOREARM_LENGTH)
+
+	## Test 3:
+	totalDistanceFromNeckInX = abs(left_hand_x - neck_x) + abs(right_hand_x - neck_x)
+	# print totalDistanceFromNeckInX
+	if totalDistanceFromNeckInX/AVG_FOREARM_LENGTH > HANDS_MIN_DIST_FROM_NECK_X/AVG_FOREARM_LENGTH:
+		messageToUser = 'It looks like you are doing the wrong exercise.'
+		PASSED[2] = False
+
+	##### Now time for feedback! 3 types of feedback possible:
+	## (1) Make sure your arms are raised high enough but now too high. 
+	##This is based on the distance between your hands and your neck
+	## (2) Make sure your arms are raised evenly
+	## (3) Make sure your arms are parrallel to the ground
+
+	## Feedback 1
+	## Too high would be too close to or above the neck Y and too low would be to far from the neck Y
+	FEEDBACK = _feedback_arms_are_raised_to_correct_height(left_hand_y, right_hand_y, neck_y, constants)
+
+	distanceBetweenElbows = abs(left_hand_y - right_hand_y)
+	if distanceBetweenElbows/AVG_FOREARM_LENGTH > DIFFERENCE_BETWEEN_ELBOWS/AVG_FOREARM_LENGTH:
+		messageToUser = 'Raise your arms evenly next time!'
+		FEEDBACK2 = 'NE'
+	else:
+		positive_word = random.choice(POSITIVE_WORDS)
+		messageToUser = positive_word + ' You raised your arms evenly you are so smart!'
+		FEEDBACK2 = 'E'
+
+	return {
+		'PASSED': PASSED,
+		'FEEDBACK': FEEDBACK,
+		'FEEDBACK2': FEEDBACK2
+	}
+
+
+### These are used for both analyses so just made it its own function
+def _test_order_of_joints(frame, order):
+	passed = True
+	for j in xrange(len(order)-1):
+		if joint_data(order[j], frame) > joint_data(order[j+1], frame):
+			passed = False
+			break
+	return passed
+
+def _test_hands_and_elbows_same_height(frame,ELBOW_HAND_Y_DIFF_AVG,AVG_FOREARM_LENGTH):
 	test2yDists = {}
 	yKeys = ["lefthandy","righthandy","leftelbowy","rightelbowy"]
 	for i in yKeys:
@@ -194,33 +241,17 @@ def updated_analyzer_sumo_kettlebell_raise(frame, constants):
 	if (((1.0*totalDiff)/numKeys)/AVG_FOREARM_LENGTH) > (1.0*ELBOW_HAND_Y_DIFF_AVG / AVG_FOREARM_LENGTH):
 		## Failed second test
 		messageToUser = 'It looks like you are doing the wrong exercise.'
-		PASSED[1] = False
+		return False
+	return True
 
-	## Test 3:
-	totalDistanceFromNeckInX = abs(left_hand_x - neck_x) + abs(right_hand_x - neck_x)
-	# print totalDistanceFromNeckInX
-	if totalDistanceFromNeckInX/AVG_FOREARM_LENGTH > HANDS_MIN_DIST_FROM_NECK_X/AVG_FOREARM_LENGTH:
-		messageToUser = 'It looks like you are doing the wrong exercise.'
-		PASSED[2] = False
-
-	##### Now time for feedback! 3 types of feedback possible:
-	## (1) Make sure your arms are raised high enough but now too high. 
-	##This is based on the distance between your hands and your neck
-	## (2) Make sure your arms are raised evenly
-	## (3) Make sure your arms are parrallel to the ground
+def _feedback_arms_are_raised_to_correct_height(left_hand_y, right_hand_y, neck_y, constants):
+	AVG_FOREARM_LENGTH = constants['AVG_FOREARM_LENGTH']
+	HANDS_MIN_DIST_FROM_NECK_Y_TOO_HIGH = constants['HANDS_MIN_DIST_FROM_NECK_Y_TOO_HIGH']
+	HANDS_MIN_DIST_FROM_NECK_Y_TOO_LOW = constants['HANDS_MIN_DIST_FROM_NECK_Y_TOO_LOW']
 
 	FEEDBACK = 'J'
-
-	## Feedback 1
-	## Too high would be too close to or above the neck Y and too low would be to far from the neck Y
 	totalDistanceFromNeckInY = (left_hand_y - neck_y) + (right_hand_y - neck_y)
-
-	avgDistanceFromNeckInY = totalDistanceFromNeckInX/2
-
-	# print 'Dist from neck: ' + str(avgDistanceFromNeckInY)
-	# print 'Too low cut: ' + str(HANDS_MIN_DIST_FROM_NECK_Y_TOO_LOW)
-	# print 'Too high cut: ' + str(HANDS_MIN_DIST_FROM_NECK_Y_TOO_HIGH)
-
+	avgDistanceFromNeckInY = totalDistanceFromNeckInY/2
 	if (avgDistanceFromNeckInY/AVG_FOREARM_LENGTH) < HANDS_MIN_DIST_FROM_NECK_Y_TOO_HIGH/AVG_FOREARM_LENGTH:
 		## Arms are too high!
 		messageToUser = 'You are raising your arms too high'
@@ -234,22 +265,52 @@ def updated_analyzer_sumo_kettlebell_raise(frame, constants):
 		positive_word = random.choice(POSITIVE_WORDS)
 		messageToUser = 'You are raising your arms to the right height '+ positive_word
 
+	return FEEDBACK
 
-	distanceBetweenElbows = abs(left_hand_y - right_hand_y)
-	if distanceBetweenElbows/AVG_FOREARM_LENGTH > DIFFERENCE_BETWEEN_ELBOWS/AVG_FOREARM_LENGTH:
-		messageToUser = 'Raise your arms evenly next time!'
-		FEEDBACK2 = 'NE'
-	else:
-		positive_word = random.choice(POSITIVE_WORDS)
-		messageToUser = positive_word + ' You raised your arms evenly you are so smart!'
-		FEEDBACK2 = 'E'
+
+
+###########################
+# BENT-OVER DUMBELL RAISE #
+###########################
+def analyze_bent_over_dumbell_raise(frame, constants):
+	ELBOW_HAND_Y_DIFF_AVG = constants["ELBOW_HAND_Y_DIFF_AVG"]
+	MAX_DIST_TORSO_NECK_Y = constants['MAX_DIST_TORSO_NECK_Y']
+	X_LENGTH_MULTIPLIER = constants["X_LENGTH_MULTIPLIER"]
+
+	AVG_FOREARM_LENGTH = normalization_forearm_length_data_in_frame(frame)
+	constants['AVG_FOREARM_LENGTH'] = AVG_FOREARM_LENGTH
+
+
+	PASSED = [True, True, True]
+	order = ["lefthandx","leftelbowx","rightelbowx","righthandx"]
+	PASSED[0] = _test_order_of_joints(frame, order)
+	PASSED[1] = _test_hands_and_elbows_same_height(frame, ELBOW_HAND_Y_DIFF_AVG, AVG_FOREARM_LENGTH)
+
+	## TEST 3: normalized distance between two hand positions is a constant times the length in x 
+	##of forearms to suggest that the arms are straight out and parallel to ground
+	dist_hands = abs(joint_data("lefthandx", frame)-joint_data("righthandx",frame))/AVG_FOREARM_LENGTH
+	if dist_hands < X_LENGTH_MULTIPLIER:
+		PASSED[2] = False
+
+	FEEDBACK = _feedback_arms_are_raised_to_correct_height(
+		joint_data("lefthandy",frame),
+		joint_data("righthandy",frame),
+		joint_data("necky",frame),
+		constants
+	)
+
+	### FEEDBACK2 is regarding the users' back
+	## Looks at the normalized difference between the torsoy and necky. It should be below some treshold
+	FEEDBACK2 = ''
+	distance_between_torso_neck_y = abs(joint_data("necky", frame) - joint_data("torsoy", frame))
+	if distance_between_torso_neck_y / AVG_FOREARM_LENGTH > MAX_DIST_TORSO_NECK_Y / AVG_FOREARM_LENGTH:
+		FEEDBACK2 = ''
 
 	return {
 		'PASSED': PASSED,
 		'FEEDBACK': FEEDBACK,
 		'FEEDBACK2': FEEDBACK2
 	}
-
 
 
 # Gives feedback on based on the data that was collected
@@ -265,6 +326,8 @@ def analyze_data(position, data, constants):
 		'FEEDBACK': [],
 		'FEEDBACK2': []
 	}
+
+	### SUMO KETTLEBELL RAISE ANALYSIS AND FEEDBACK
 	if position == "sumo kettlebell raise":
 		toCheck = ["lefthandy", "righthandy"]
 		# toCheck = ["lefthandy"]
@@ -278,66 +341,119 @@ def analyze_data(position, data, constants):
 			finalResults['FEEDBACK'].append(currResults['FEEDBACK'])
 			finalResults['FEEDBACK2'].append(currResults['FEEDBACK2'])
 
-	### Now give feedback!
-	print("---------------------------------------------------------------------------")
-	for key in ['PASSED','FEEDBACK','FEEDBACK2']:
-		messageToUser = ""
-		if key == "PASSED":
-			if not finalResults[key][0]:
-				messageToUser = 'It looks like you are doing the wrong exercise. Make sure your elbows dont move as your hands move straight up towards your head.'
-				print messageToUser
-				os.system("say " + messageToUser)
-				break
-			elif not finalResults[key][1]: 
-				messageToUser = 'It looks like you are doing the wrong exercise.'
-				print messageToUser
-				os.system("say " + messageToUser)
-				break
-			elif not finalResults[key][2]:
-				messageToUser = 'It looks like you are doing the wrong exercise.'
-				print messageToUser
-				os.system("say " + messageToUser)
-				break
+		### Now give feedback!
+		print("---------------------------------------------------------------------------")
+		for key in ['PASSED','FEEDBACK','FEEDBACK2']:
+			messageToUser = ""
+			if key == "PASSED":
+				if not finalResults[key][0]:
+					messageToUser = 'It looks like you are doing the wrong exercise. Make sure your elbows dont move as your hands move straight up towards your head.'
+					print messageToUser
+					if sayYN: os.system("say " + messageToUser)
+					break
+				elif not finalResults[key][1]: 
+					messageToUser = 'It looks like you are doing the wrong exercise.'
+					print messageToUser
+					if sayYN: os.system("say " + messageToUser)
+					break
+				elif not finalResults[key][2]:
+					messageToUser = 'It looks like you are doing the wrong exercise.'
+					print messageToUser
+					if sayYN: os.system("say " + messageToUser)
+					break
 
-		if key == 'FEEDBACK':
-			key = finalResults[key][0] + finalResults[key][0]
-			if key == 'LL':
-				messageToUser = 'You need to raise your arms higher'
-				print messageToUser
-				os.system("say " + messageToUser)
-			elif key == 'HH':
-				messageToUser = 'You are raising your arms too high!'
-				print messageToUser
-				os.system("say " + messageToUser)
-			else:
-				messageToUser = 'You are raising your arms to the right height good job!'
-				print messageToUser
-				os.system("say " + messageToUser )
+			if key == 'FEEDBACK':
+				_give_height_feedback(finalResults[key])
 
-		if key == 'FEEDBACK2':
-			key = finalResults[key][0] + finalResults[key][0]
-			if key == 'NENE':
-				messageToUser = 'Raise your arms evenly next time!'
-				print messageToUser
-				os.system("say " + messageToUser )
-			else:
-				messageToUser = 'Congrats! You raised your arms evenly you are so smart!'
-				print messageToUser
-				os.system("say " + messageToUser )
+			if key == 'FEEDBACK2':
+				key = finalResults[key][0] + finalResults[key][0]
+				if key == 'NENE':
+					messageToUser = 'Raise your arms evenly next time!'
+					print messageToUser
+					if sayYN: os.system("say " + messageToUser )
+				else:
+					messageToUser = 'Congrats! You raised your arms evenly you are so smart!'
+					print messageToUser
+					if sayYN: os.system("say " + messageToUser )
+
+	## BENT-OVER DUMBELL RAISE ANALYSIS AND FEEDBACK
+	if position == "bent-over dumbbell raise":
+		## Have to decide how to choose a frame. This will actually be the same as for the previous
+		## exercise (when the hands are the highest)
+		toCheck = ["lefthandy", "righthandy"]
+		for val in toCheck:
+			frame = select_frame(data, val, "max")
+
+			#### THIS ANALYZES ONLY THE END RIGHT NOW! NEEDS TO ANALYZE THE STARTING POSITION
+			currResults = analyze_bent_over_dumbell_raise(frame,constants)
+			for i in xrange(len(currResults['PASSED'])):
+				if currResults['PASSED'][i]:
+					finalResults['PASSED'][i] = True
+			finalResults['FEEDBACK'].append(currResults['FEEDBACK'])
+			## Get the feedback results from the analysis
+		for key in ['PASSED','FEEDBACK','FEEDBACK2']:
+			messageToUser = ""
+			if key == "PASSED":
+				if not finalResults[key][0]:
+					print 'Reason 1: '
+					messageToUser = 'It looks like you are doing the wrong exercise'
+					print messageToUser
+					if sayYN: os.system("say " + messageToUser)
+					break
+				elif not finalResults[key][1]: 
+					print 'Reason 2: '
+					messageToUser = 'It looks like you are doing the wrong exercise'
+					print messageToUser
+					if sayYN: os.system("say " + messageToUser)
+					break
+				elif not finalResults[key][2]: 
+					print 'Reason 3: '
+					messageToUser = 'It looks like you are doing the wrong exercise'
+					print messageToUser
+					if sayYN: os.system("say " + messageToUser)
+					break
+			## Same as above
+			if key == 'FEEDBACK':
+				_give_height_feedback(finalResults[key])
+		return
 
 	return finalResults
 
+def _give_height_feedback(feedback):
+	key = feedback[0] + feedback[0]
+	if key == 'LL':
+		messageToUser = 'You need to raise your arms higher'
+		print messageToUser
+		if sayYN: os.system("say " + messageToUser)
+	elif key == 'HH':
+		messageToUser = 'You are raising your arms too high!'
+		print messageToUser
+		if sayYN: os.system("say " + messageToUser)
+	else:
+		messageToUser = 'You are raising your arms to the right height good job!'
+		print messageToUser
+		if sayYN: os.system("say " + messageToUser )
+
+
 CONSTS = {
-	'ELBOW_HAND_Y_DIFF_AVG': 220,
-	'HANDS_MIN_DIST_FROM_NECK_X': 200,
-	'HANDS_MIN_DIST_FROM_NECK_Y_TOO_LOW': 170,
-	'HANDS_MIN_DIST_FROM_NECK_Y_TOO_HIGH': 20,
-	'DIFFERENCE_BETWEEN_ELBOWS': 40
+	'sumo kettlebell raise' : {
+		'ELBOW_HAND_Y_DIFF_AVG': 220,
+		'HANDS_MIN_DIST_FROM_NECK_X': 200,
+		'HANDS_MIN_DIST_FROM_NECK_Y_TOO_LOW': 170,
+		'HANDS_MIN_DIST_FROM_NECK_Y_TOO_HIGH': 20,
+		'DIFFERENCE_BETWEEN_ELBOWS': 40
+	},
+	'bent-over dumbbell raise': {
+		'ELBOW_HAND_Y_DIFF_AVG': 200,
+		'X_LENGTH_MULTIPLIER': 4.5,
+		'HANDS_MIN_DIST_FROM_NECK_Y_TOO_LOW': 170,
+		'HANDS_MIN_DIST_FROM_NECK_Y_TOO_HIGH': 20,
+	}
 }
 
 
 
-res = analyze_data(exercise, data, CONSTS)
+res = analyze_data(exercise, data, CONSTS[exercise])
 
 ####### TESTING BELOW
 
