@@ -274,7 +274,7 @@ def _feedback_arms_are_raised_to_correct_height(left_hand_y, right_hand_y, neck_
 ###########################
 def analyze_bent_over_dumbell_raise(frame, constants):
 	ELBOW_HAND_Y_DIFF_AVG = constants["ELBOW_HAND_Y_DIFF_AVG"]
-	MAX_DIST_TORSO_NECK_Y = constants['MAX_DIST_TORSO_NECK_Y']
+	# MAX_DIST_TORSO_NECK_Y = constants['MAX_DIST_TORSO_NECK_Y']
 	X_LENGTH_MULTIPLIER = constants["X_LENGTH_MULTIPLIER"]
 
 	AVG_FOREARM_LENGTH = normalization_forearm_length_data_in_frame(frame)
@@ -302,9 +302,9 @@ def analyze_bent_over_dumbell_raise(frame, constants):
 	### FEEDBACK2 is regarding the users' back
 	## Looks at the normalized difference between the torsoy and necky. It should be below some treshold
 	FEEDBACK2 = ''
-	distance_between_torso_neck_y = abs(joint_data("necky", frame) - joint_data("torsoy", frame))
-	if distance_between_torso_neck_y / AVG_FOREARM_LENGTH > MAX_DIST_TORSO_NECK_Y / AVG_FOREARM_LENGTH:
-		FEEDBACK2 = ''
+	# distance_between_torso_neck_y = abs(joint_data("necky", frame) - joint_data("torsoy", frame))
+	# if distance_between_torso_neck_y / AVG_FOREARM_LENGTH > MAX_DIST_TORSO_NECK_Y / AVG_FOREARM_LENGTH:
+	# 	FEEDBACK2 = ''
 
 	return {
 		'PASSED': PASSED,
