@@ -10,7 +10,7 @@ while [ "$exercise_number" != "1" ] && [ "$exercise_number" != "2" ]; do
   read exercise_number
 done
 
-say -v "Alex" "Starting ${exercises[$exercise_number]}"
+say -v "Alex" "You selected ${exercises[$exercise_number]}. Wait for start screen for further instructions"
 echo "Starting ${exercises[$exercise_number]}"
 rm $PWD/data/positions_*.csv
 
