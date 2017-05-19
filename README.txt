@@ -1,4 +1,6 @@
-Requires Mac OS
+Hardware Required: 
+(1) Mac OS
+(2) Kinect 1 (long range)
 
 Set Up
 (1) Download Processing 2 and SimpleOpenNI v1.8
